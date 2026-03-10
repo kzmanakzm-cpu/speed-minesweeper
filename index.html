@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マインスイーパ 20×20</title>
+  <style>
+    @font-face {
+      font-family: 'DSEG7';
+      src: url('https://cdn.jsdelivr.net/npm/dseg@0.46/fonts/DSEG7-Classic/DSEG7Classic-Regular.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-family: "MS PGothic", "MS Gothic", "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #c0c0c0 0%, #808080 100%);
+      padding: 16px;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 1.25rem;
+      color: #000;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: calc(20 * 22px + 14px);
+      padding: 6px 8px;
+      background: #c0c0c0;
+      border: 2px solid;
+      border-color: #fff #404040 #404040 #fff;
+      margin-bottom: 4px;
+    }
+    .mines-display {
+      width: 52px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      font-weight: bold;
+      background: #0a0a0a;
+      color: #e60000;
+      font-variant-numeric: tabular-nums;
+      border: 1px solid #333;
+      font-family: 'DSEG7', monospace;
+      text-shadow: 0 0 8px #e60000, 0 0 4px #e60000;
+    }
+    .timer {
+      width: 108px;
+      height: 32px;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 0;
+      background: #0a0a0a;
+      color: #e60000;
+      font-variant-numeric: tabular-nums;
+      border: 1px solid #333;
+      font-family: 'DSEG7', monospace;
+      text-shadow: 0 0 8px #e60000, 0 0 4px #e60000;
+      padding: 4px 10px;
+      box-sizing: border-box;
+    }
+    .timer-int {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    .timer-dot {
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+    .timer-dec {
+      font-size: 0.75rem;
+      vertical-align: top;
+      line-height: 1.4;
+    }
+    .result-banner {
+      display: none;
+      width: 100%;
+      max-width: calc(20 * 22px + 14px);
+      margin-bottom: 8px;
+      padding: 8px 12px;
+      text-align: center;
+      font-family: 'DSEG7', monospace;
+      font-size: 1rem;
+      color: #e60000;
+      background: #0a0a0a;
+      border: 2px solid #333;
+      box-shadow: inset 0 0 12px rgba(230,0,0,0.2), 0 0 12px rgba(230,0,0,0.3);
+      text-shadow: 0 0 10px #e60000, 0 0 4px #e60000;
+    }
+    .result-banner.visible {
+      display: block;
+      animation: result-pulse 0.6s ease-out;
+    }
+    @keyframes result-pulse {
+      0% { transform: scale(0.98); opacity: 0.8; }
+      50% { transform: scale(1.02); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .result-banner .result-label { font-weight: bold; }
+    .result-banner .result-time { margin-left: 4px; }
+    .result-banner .result-time .dec { font-size: 0.85em; opacity: 0.95; }
+    .result-banner.best .best-badge {
+      display: block;
+      margin-top: 4px;
+      font-size: 0.9rem;
+      color: #ff4444;
+      text-shadow: 0 0 8px #ff4444;
+    }
+    .result-banner .best-badge { display: none; }
+    .face-btn {
+      width: 32px;
+      height: 32px;
+      font-size: 1.25rem;
+      padding: 0;
+      border: 2px solid;
+      border-color: #fff #404040 #404040 #fff;
+      background: #c0c0c0;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .face-btn:hover { background: #d0d0d0; }
+    .face-btn:active {
+      border-color: #404040 #fff #fff #404040;
+      padding: 1px 0 0 1px;
+    }
+    .grid-wrap {
+      border: 3px solid;
+      border-color: #404040 #fff #fff #404040;
+      padding: 4px;
+      background: #c0c0c0;
+      display: inline-block;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(20, 22px);
+      grid-template-rows: repeat(20, 22px);
+      gap: 0;
+      border: 1px solid #808080;
+      background: #c0c0c0;
+    }
+    .cell {
+      width: 22px;
+      height: 22px;
+      border: 1px solid;
+      border-color: #fff #808080 #808080 #fff;
+      background: #c0c0c0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .cell:hover:not(.revealed):not(.flagged) {
+      background: #d0d0d0;
+    }
+    .cell.revealed {
+      border: 1px solid #808080;
+      background: #c0c0c0;
+      cursor: default;
+      border-color: #808080;
+    }
+    .cell.revealed.mine {
+      background: #f00;
+    }
+    .cell.flagged::before {
+      content: "🚩";
+      font-size: 12px;
+    }
+    .cell.num-1 { color: #0000ff; }
+    .cell.num-2 { color: #008000; }
+    .cell.num-3 { color: #ff0000; }
+    .cell.num-4 { color: #000080; }
+    .cell.num-5 { color: #800000; }
+    .cell.num-6 { color: #008080; }
+    .cell.num-7 { color: #000000; }
+    .cell.num-8 { color: #808080; }
+    .cell.mine-reveal::after {
+      content: "💣";
+      font-size: 14px;
+    }
+    .game-over .cell { cursor: default; }
+    .game-over .cell:not(.revealed):hover { background: #c0c0c0; }
+  </style>
+</head>
+<body>
+  <h1>マインスイーパ 20×20</h1>
+  <div class="result-banner" id="resultBanner" aria-live="polite"></div>
+  <div class="toolbar">
+    <div class="mines-display" id="minesDisplay">060</div>
+    <button class="face-btn" id="faceBtn" type="button" aria-label="やり直し">🙂</button>
+    <div class="timer" id="timer">
+      <span class="timer-int" id="timerInt">00</span><span class="timer-dot">.</span><span class="timer-dec" id="timerDec">00</span>
+    </div>
+  </div>
+  <div class="grid-wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <script>
+    const ROWS = 20;
+    const COLS = 20;
+    const TOTAL = ROWS * COLS;
+    const MINE_COUNT = 60; // 約15%
+
+    let grid = [];
+    let mineMap = [];
+    let revealed = [];
+    let flagged = [];
+    let gameOver = false;
+    let gameWon = false;
+    let firstClick = true;
+    const BEST_TIME_KEY = 'minesweeper_best_20x20';
+    let timerId = null;
+    let timerMs = 0;
+    let chordJustDone = false;
+
+    const gridEl = document.getElementById('grid');
+    const minesDisplay = document.getElementById('minesDisplay');
+    const timerIntEl = document.getElementById('timerInt');
+    const timerDecEl = document.getElementById('timerDec');
+    const faceBtn = document.getElementById('faceBtn');
+    const resultBannerEl = document.getElementById('resultBanner');
+
+    function pad3(n) {
+      return String(Math.min(999, Math.max(0, n))).padStart(3, '0');
+    }
+
+    function updateMinesDisplay() {
+      const flags = flagged.flat().filter(Boolean).length;
+      minesDisplay.textContent = pad3(MINE_COUNT - flags);
+    }
+
+    function formatTime(ms) {
+      const sec = Math.floor(ms / 1000);
+      const dec = Math.floor((ms % 1000) / 10);
+      const s = Math.min(9999, sec);
+      const d = Math.min(99, dec);
+      return { int: String(s).padStart(4, '0'), dec: String(d).padStart(2, '0'), raw: s + d / 100 };
+    }
+
+    function updateTimerDisplay() {
+      const { int, dec } = formatTime(timerMs);
+      timerIntEl.textContent = int;
+      timerDecEl.textContent = dec;
+    }
+
+    function startTimer() {
+      if (timerId) return;
+      timerId = setInterval(() => {
+        timerMs += 10;
+        updateTimerDisplay();
+      }, 10);
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function getBestTime() {
+      const v = localStorage.getItem(BEST_TIME_KEY);
+      return v != null ? Number(v) : null;
+    }
+
+    function setBestTime(ms) {
+      localStorage.setItem(BEST_TIME_KEY, String(ms));
+    }
+
+    function showResult(won) {
+      const { int, dec, raw } = formatTime(timerMs);
+      resultBannerEl.innerHTML = '';
+      resultBannerEl.className = 'result-banner visible' + (won ? ' best' : '');
+      const label = document.createElement('span');
+      label.className = 'result-label';
+      label.textContent = won ? 'CLEAR! ' : 'FAIL ';
+      const timeSpan = document.createElement('span');
+      timeSpan.className = 'result-time';
+      timeSpan.innerHTML = int + '.<span class="dec">' + dec + '</span>';
+      resultBannerEl.appendChild(label);
+      resultBannerEl.appendChild(timeSpan);
+      if (won) {
+        const best = getBestTime();
+        const isNewRecord = best == null || timerMs < best;
+        if (isNewRecord && timerMs > 0) setBestTime(timerMs);
+        const badge = document.createElement('div');
+        badge.className = 'best-badge';
+        badge.textContent = isNewRecord ? 'NEW RECORD!' : 'BEST: ' + formatTime(getBestTime()).int + '.' + formatTime(getBestTime()).dec;
+        resultBannerEl.appendChild(badge);
+      }
+    }
+
+    function getNeighbors(r, c) {
+      const out = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) out.push([nr, nc]);
+        }
+      }
+      return out;
+    }
+
+    function placeMines(excludeR, excludeC) {
+      const exclude = new Set([`${excludeR},${excludeC}`]);
+      getNeighbors(excludeR, excludeC).forEach(([r, c]) => exclude.add(`${r},${c}`));
+      const positions = [];
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (!exclude.has(`${r},${c}`)) positions.push([r, c]);
+        }
+      }
+      for (let i = positions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [positions[i], positions[j]] = [positions[j], positions[i]];
+      }
+      const mineMapNew = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+      for (let k = 0; k < MINE_COUNT && k < positions.length; k++) {
+        const [r, c] = positions[k];
+        mineMapNew[r][c] = true;
+      }
+      return mineMapNew;
+    }
+
+    function buildCounts() {
+      const counts = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (mineMap[r][c]) continue;
+          getNeighbors(r, c).forEach(([nr, nc]) => {
+            if (mineMap[nr][nc]) counts[r][c]++;
+          });
+        }
+      }
+      return counts;
+    }
+
+    function countFlagsAround(r, c) {
+      return getNeighbors(r, c).filter(([nr, nc]) => flagged[nr][nc]).length;
+    }
+
+    function revealCell(r, c) {
+      if (gameOver || gameWon) return;
+      if (flagged[r][c]) return;
+
+      // 既に開いている数字マスをクリック → 周囲の旗の数が一致していれば残りを一括オープン（ chord ）
+      if (revealed[r][c]) {
+        if (!grid[r] || grid[r][c] === 0) return;
+        if (countFlagsAround(r, c) !== grid[r][c]) return;
+        getNeighbors(r, c).forEach(([nr, nc]) => {
+          if (!revealed[nr][nc] && !flagged[nr][nc]) revealCell(nr, nc);
+        });
+        return;
+      }
+
+      if (firstClick) {
+        firstClick = false;
+        mineMap = placeMines(r, c);
+        grid = buildCounts();
+        startTimer();
+      }
+
+      if (mineMap[r][c]) {
+        gameOver = true;
+        stopTimer();
+        showResult(false);
+        faceBtn.textContent = '😵';
+        document.getElementById('gridWrap')?.classList.add('game-over');
+        gridEl.classList.add('game-over');
+        revealed[r][c] = true;
+        renderCell(r, c, true);
+        // 他の地雷も表示
+        for (let rr = 0; rr < ROWS; rr++) {
+          for (let cc = 0; cc < COLS; cc++) {
+            if (mineMap[rr][cc] && !flagged[rr][cc]) {
+              revealed[rr][cc] = true;
+              renderCell(rr, cc, true);
+            }
+          }
+        }
+        return;
+      }
+
+      const stack = [[r, c]];
+      while (stack.length) {
+        const [rr, cc] = stack.pop();
+        if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) continue;
+        if (revealed[rr][cc] || flagged[rr][cc]) continue;
+        revealed[rr][cc] = true;
+        renderCell(rr, cc, false);
+        if (grid[rr][cc] === 0) {
+          getNeighbors(rr, cc).forEach(([nr, nc]) => stack.push([nr, nc]));
+        }
+      }
+
+      checkWin();
+    }
+
+    function checkWin() {
+      let revealedCount = 0;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          if (revealed[r][c]) revealedCount++;
+        }
+      }
+      if (revealedCount === TOTAL - MINE_COUNT) {
+        gameWon = true;
+        stopTimer();
+        showResult(true);
+        faceBtn.textContent = '😎';
+        gridEl.classList.add('game-over');
+        // 残りマスを旗で埋める
+        for (let r = 0; r < ROWS; r++) {
+          for (let c = 0; c < COLS; c++) {
+            if (mineMap[r][c] && !flagged[r][c]) {
+              flagged[r][c] = true;
+              renderCell(r, c, false);
+            }
+          }
+        }
+        updateMinesDisplay();
+      }
+    }
+
+    function toggleFlag(r, c) {
+      if (gameOver || gameWon) return;
+      if (revealed[r][c]) return;
+      flagged[r][c] = !flagged[r][c];
+      renderCell(r, c, false);
+      updateMinesDisplay();
+    }
+
+    // 数字マスで左右同時クリック：残り地雷数 = 未開封・無旗の隣接マス数 ⇒ それらはすべて地雷なので旗を立てる
+    function chordFlag(r, c) {
+      if (gameOver || gameWon) return;
+      if (!revealed[r][c] || !grid[r] || grid[r][c] === 0) return;
+      const n = grid[r][c];
+      const flagsCount = countFlagsAround(r, c);
+      const unrevealedUnflagged = getNeighbors(r, c).filter(
+        ([nr, nc]) => !revealed[nr][nc] && !flagged[nr][nc]
+      );
+      const remainingMines = n - flagsCount;
+      // 残り地雷数と未開封・無旗の隣接マス数が一致 ⇒ それらはすべて地雷
+      if (remainingMines !== unrevealedUnflagged.length || unrevealedUnflagged.length === 0) return;
+      unrevealedUnflagged.forEach(([nr, nc]) => {
+        flagged[nr][nc] = true;
+        renderCell(nr, nc, false);
+      });
+      updateMinesDisplay();
+      checkWin();
+    }
+
+    // 数字マスで左右同時クリック：周囲の旗が数字と一致 ⇒ 未開封・無旗の隣接マスに地雷はないので一括で開く（クリックと同じ効果）
+    function chordReveal(r, c) {
+      if (gameOver || gameWon) return;
+      if (!revealed[r][c] || !grid[r] || grid[r][c] === 0) return;
+      const n = grid[r][c];
+      const flagsCount = countFlagsAround(r, c);
+      if (flagsCount !== n) return;
+      const unrevealedUnflagged = getNeighbors(r, c).filter(
+        ([nr, nc]) => !revealed[nr][nc] && !flagged[nr][nc]
+      );
+      if (unrevealedUnflagged.length === 0) return;
+      unrevealedUnflagged.forEach(([nr, nc]) => revealCell(nr, nc));
+    }
+
+    function renderCell(r, c, showMine) {
+      const idx = r * COLS + c;
+      const el = gridEl.children[idx];
+      const isRevealed = revealed[r][c];
+      const isFlag = flagged[r][c];
+      const isMine = mineMap[r] && mineMap[r][c];
+
+      el.classList.remove('revealed', 'flagged', 'mine-reveal', 'mine-reveal', 'num-1', 'num-2', 'num-3', 'num-4', 'num-5', 'num-6', 'num-7', 'num-8');
+      el.textContent = '';
+      el.dataset.r = r;
+      el.dataset.c = c;
+
+      if (isRevealed) {
+        el.classList.add('revealed');
+        if (isMine) {
+          el.classList.add('mine-reveal');
+          if (showMine) el.classList.add('mine');
+        } else if (grid[r] && grid[r][c] > 0) {
+          el.textContent = grid[r][c];
+          el.classList.add('num-' + grid[r][c]);
+        }
+      } else {
+        if (isFlag) el.classList.add('flagged');
+      }
+    }
+
+    function init() {
+      grid = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+      mineMap = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+      revealed = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+      flagged = Array(ROWS).fill(null).map(() => Array(COLS).fill(false));
+      gameOver = false;
+      gameWon = false;
+      firstClick = true;
+      chordJustDone = false;
+      stopTimer();
+      timerMs = 0;
+      updateTimerDisplay();
+      resultBannerEl.classList.remove('visible');
+      resultBannerEl.innerHTML = '';
+      updateMinesDisplay();
+      faceBtn.textContent = '🙂';
+      gridEl.classList.remove('game-over');
+
+      gridEl.innerHTML = '';
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.r = r;
+          cell.dataset.c = c;
+
+          cell.addEventListener('mousedown', (e) => {
+            if (gameOver || gameWon) return;
+            const rn = +cell.dataset.r, cn = +cell.dataset.c;
+            // 左右同時クリック（両ボタン押下）→ 数字マスで旗数が一致していれば残りに旗を立てる
+            if (e.buttons === 3) {
+              if (revealed[rn][cn] && grid[rn] && grid[rn][cn] > 0) {
+                e.preventDefault();
+                chordFlag(rn, cn);   // 残りがすべて地雷と分かるとき → 旗を立てる
+                chordReveal(rn, cn); // 周囲の旗が数字と一致（地雷なしと分かるとき）→ 一括で開く
+                chordJustDone = true;
+              }
+              return;
+            }
+            if (e.button === 0 && !revealed[rn][cn] && !flagged[rn][cn]) {
+              faceBtn.textContent = '😮';
+            }
+          });
+
+          cell.addEventListener('click', (e) => {
+            e.preventDefault();
+            chordJustDone = false;
+            faceBtn.textContent = '🙂';
+            const rn = +cell.dataset.r, cn = +cell.dataset.c;
+            revealCell(rn, cn);
+          });
+
+          cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (chordJustDone) {
+              chordJustDone = false;
+              return;
+            }
+            const rn = +cell.dataset.r, cn = +cell.dataset.c;
+            toggleFlag(rn, cn);
+          });
+
+          gridEl.appendChild(cell);
+        }
+      }
+    }
+
+    faceBtn.addEventListener('click', () => init());
+
+    document.addEventListener('mouseup', () => {
+      if (!gameOver && !gameWon) faceBtn.textContent = '🙂';
+    });
+
+    init();
+  </script>
+</body>
+</html>

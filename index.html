@@ -195,22 +195,39 @@
     }
     .game-over .cell { cursor: default; }
     .game-over .cell:not(.revealed):hover { background: #c0c0c0; }
+    .game-area {
+      display: inline-block;
+    }
+    .screenshot-download-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #00f;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .screenshot-download-link:hover {
+      color: #00a;
+    }
   </style>
 </head>
 <body>
   <h1>マインスイーパ 20×20</h1>
-  <div class="result-banner" id="resultBanner" aria-live="polite"></div>
-  <div class="toolbar">
-    <div class="mines-display" id="minesDisplay">060</div>
-    <button class="face-btn" id="faceBtn" type="button" aria-label="やり直し">🙂</button>
-    <div class="timer" id="timer">
-      <span class="timer-int" id="timerInt">00</span><span class="timer-dot">.</span><span class="timer-dec" id="timerDec">00</span>
+  <div id="gameArea" class="game-area">
+    <div class="result-banner" id="resultBanner" aria-live="polite"></div>
+    <div class="toolbar">
+      <div class="mines-display" id="minesDisplay">060</div>
+      <button class="face-btn" id="faceBtn" type="button" aria-label="やり直し">🙂</button>
+      <div class="timer" id="timer">
+        <span class="timer-int" id="timerInt">00</span><span class="timer-dot">.</span><span class="timer-dec" id="timerDec">00</span>
+      </div>
+    </div>
+    <div class="grid-wrap">
+      <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="grid-wrap">
-    <div class="grid" id="grid"></div>
-  </div>
+  <a href="#" id="screenshotDownloadLink" class="screenshot-download-link" style="display: none;">スクショをダウンロード</a>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
     const ROWS = 20;
     const COLS = 20;
@@ -237,6 +254,7 @@
     const timerDecEl = document.getElementById('timerDec');
     const faceBtn = document.getElementById('faceBtn');
     const resultBannerEl = document.getElementById('resultBanner');
+    const screenshotDownloadLinkEl = document.getElementById('screenshotDownloadLink');
 
     function pad3(n) {
       return String(Math.min(999, Math.max(0, n))).padStart(3, '0');
@@ -438,7 +456,29 @@
           }
         }
         updateMinesDisplay();
+        if (screenshotDownloadLinkEl) screenshotDownloadLinkEl.style.display = '';
       }
+    }
+
+    function captureGameAreaAndDownload() {
+      const el = document.getElementById('gameArea');
+      if (!el || typeof html2canvas !== 'function') return;
+      html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false
+      }).then(function(canvas) {
+        const dataUrl = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        const name = 'minesweeper-clear-' + new Date().toISOString().slice(0, 19).replace(/[:-]/g, '') + '.png';
+        a.download = name;
+        a.href = dataUrl;
+        a.click();
+      }).catch(function(err) {
+        console.error('capture failed', err);
+      });
     }
 
     function toggleFlag(r, c) {
@@ -523,6 +563,7 @@
       updateTimerDisplay();
       resultBannerEl.classList.remove('visible');
       resultBannerEl.innerHTML = '';
+      if (screenshotDownloadLinkEl) screenshotDownloadLinkEl.style.display = 'none';
       updateMinesDisplay();
       faceBtn.textContent = '🙂';
       gridEl.classList.remove('game-over');
@@ -610,6 +651,13 @@
     }
 
     faceBtn.addEventListener('click', () => init());
+
+    if (screenshotDownloadLinkEl) {
+      screenshotDownloadLinkEl.addEventListener('click', (e) => {
+        e.preventDefault();
+        captureGameAreaAndDownload();
+      });
+    }
 
     document.addEventListener('mouseup', () => {
       if (!gameOver && !gameWon) faceBtn.textContent = '🙂';

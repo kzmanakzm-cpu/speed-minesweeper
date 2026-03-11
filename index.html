@@ -185,8 +185,7 @@
     .cell.revealed.mine {
       background: #f00;
     }
-    .cell.flagged::before {
-      content: "🚩";
+    .cell.flagged {
       font-size: 12px;
     }
     .cell.num-1 { color: #0000ff; }
@@ -197,8 +196,7 @@
     .cell.num-6 { color: #008080; }
     .cell.num-7 { color: #000000; }
     .cell.num-8 { color: #808080; }
-    .cell.mine-reveal::after {
-      content: "💣";
+    .cell.mine-reveal.mine {
       font-size: 14px;
     }
     .game-over .cell { cursor: default; }
@@ -481,7 +479,7 @@
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: null,
+        backgroundColor: '#c0c0c0',
         logging: false
       }).then(function(canvas) {
         const dataUrl = canvas.toDataURL('image/png');
@@ -553,13 +551,21 @@
         el.classList.add('revealed');
         if (isMine) {
           el.classList.add('mine-reveal');
-          if (showMine) el.classList.add('mine');
+          if (isFlag) {
+            el.textContent = '🚩';
+          } else if (showMine) {
+            el.classList.add('mine');
+            el.textContent = '💣';
+          }
         } else if (grid[r] && grid[r][c] > 0) {
           el.textContent = grid[r][c];
           el.classList.add('num-' + grid[r][c]);
         }
       } else {
-        if (isFlag) el.classList.add('flagged');
+        if (isFlag) {
+          el.classList.add('flagged');
+          el.textContent = '🚩';
+        }
       }
     }
 

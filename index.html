@@ -228,6 +228,8 @@
     let timerId = null;
     let timerMs = 0;
     let chordJustDone = false;
+    let longPressTimer = null;
+    let longPressTriggered = false;
 
     const gridEl = document.getElementById('grid');
     const minesDisplay = document.getElementById('minesDisplay');
@@ -551,8 +553,41 @@
             }
           });
 
+          // スマホ：数字マスを長押しで左右同時クリック（chord）と同じ自動展開
+          (function setupLongPress() {
+            const rn = +cell.dataset.r, cn = +cell.dataset.c;
+            const LONG_PRESS_MS = 500;
+            function clearLongPressTimer() {
+              if (longPressTimer !== null) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+              }
+            }
+            cell.addEventListener('touchstart', (e) => {
+              if (gameOver || gameWon) return;
+              clearLongPressTimer();
+              longPressTriggered = false;
+              longPressTimer = setTimeout(() => {
+                longPressTimer = null;
+                if (revealed[rn][cn] && grid[rn] && grid[rn][cn] > 0) {
+                  chordFlag(rn, cn);
+                  chordReveal(rn, cn);
+                  chordJustDone = true;
+                  longPressTriggered = true;
+                }
+              }, LONG_PRESS_MS);
+            }, { passive: true });
+            cell.addEventListener('touchmove', clearLongPressTimer, { passive: true });
+            cell.addEventListener('touchend', clearLongPressTimer, { passive: true });
+            cell.addEventListener('touchcancel', clearLongPressTimer, { passive: true });
+          })();
+
           cell.addEventListener('click', (e) => {
             e.preventDefault();
+            if (longPressTriggered) {
+              longPressTriggered = false;
+              return;
+            }
             chordJustDone = false;
             faceBtn.textContent = '🙂';
             const rn = +cell.dataset.r, cn = +cell.dataset.c;

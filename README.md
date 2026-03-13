@@ -18,7 +18,15 @@
 
 - クリア時だけ「スクショをダウンロード」リンクが表示されます。クリックでゲームエリアの PNG を保存できます。
 
+## Electron（Windows exe）
+
+- `npm install` で依存関係をインストール
+- `npm start` でアプリ起動
+- `npm run build` で Windows 用 exe をビルド（`dist/speedmine.exe` または `dist/win-unpacked/speedmine.exe`）
+- ビルド時は **Electron のウィンドウを閉じてから** 実行すること（ファイルロックで失敗することがある）
+
 ## 技術
 
 - HTML / CSS / JavaScript
 - CDN: DSEG7 フォント、html2canvas（スクショ用）
+- Electron（デスクトップ exe 化）
